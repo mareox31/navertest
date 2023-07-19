@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="board.spring.mybatis.BoardDAO"> <!-- xml에게 맵퍼 객체누군지알려준다. -->
+
+<insert id="insertBoard" parameterType="boarddto" >
+ insert into board(title, contents, writer, pw, viewcount, writingtime) 
+ values(#{title}, #{contents}, #{writer}, #{pw}, 0, now())
+</insert>
+
+<select id="getTotalBoard" resultType="int" >
+	select count(*) from board
+</select>
+
+<select id="boardList" resultType="boarddto" parameterType="int">
+ select * from board order by writingtime desc limit 
+ <foreach collection="array" item="num" separator=",">
+ #{num}
+ </foreach>
+</select>
+
+<update id="updateViewcount" parameterType="int">
+ update board set viewcount = viewcount+1 where seq=#{seq} 
+</update>
+
+<select id="getDetail" resultType="boarddto" parameterType="int">
+select * from board  where seq=#{seq} 
+</select>
+
+<delete id="deleteBoard" parameterType="int">
+ delete from board where seq=#{seq}
+</delete>
+
+<update id="updateBoard" parameterType="boarddto">
+		update board 
+		set title=#{title}, contents=#{contents}, writingtime=now()
+		where seq=#{seq}
+</update> 
+
+
+<!-- 검색  -->
+<!-- map.put("colname",item);  
+	map.put("colvalue",word); 
+-->
+
+<!-- 실제 mapper 붙은 DAO메소드이름과 동일해야한다. //리스트 나옴, 결과 boarddto-->
+<!-- 조건문 사용. where까진 동일. 그 뒤는 조건문. -->
+<!-- choose 맵핑파일안에, 조거문. 그 나머지 otherwise-->
+<!-- '자동처리'  문자열 #{} 컬럼이름 ${} 양쪽 따옴표붙으면안되니까컬럼이름은.-->
+<!-- 여기선 concate 자바선 덧셈연산자. -->
+<select id="searchList" resultType="boarddto" parameterType="hashmap">
+select * from board where 
+<choose>
+<when test="colname == null">
+title like #{colvalue} or contents like #{colvalue} or writer like #{colvalue}
+</when>
+<otherwise>
+${colname} like #{colvalue}
+</otherwise>
+</choose>
+order by writingtime desc
+
+</select>
+
+
+<!-- 서치갯수. 검색된갯수, 페이징처리위해 / 카운트라 결과 갯수리턴 int-->
+<select id="getSearchBoard" resultType="int" parameterType="hashmap">
+select count(*) from board where 
+<choose>
+<when test="colname == null">
+title like #{colvalue} or contents like #{colvalue} or writer like #{colvalue}
+</when>
+<otherwise>
+${colname} like #{colvalue}
+</otherwise>
+</choose>
+</select>
+
+
+
+<resultMap type="board.spring.mybatis.BoardMemberDTO" id="boardwritermap">
+	<id property="seq" column="seq"/> <!-- 프라이머리키 1글 쓴 작성자는 1명밖에 안됨. 2테이블 관계 1:1 (association)--> 
+	<result property="title" column="title"/>
+	<result property="contents" column="contents"/>
+	<result property="viewcount" column="viewcount"/>
+	<result property="writingtime" column="writingtime"/>
+	<result property="pw" column="b_pw"/>
+	<association property="member" resultMap="memberMap"/> <!-- 두 테이블이 1:1관계가 있다. resultMap(M대문자) -->
+	
+	<!-- member.memberid 가 memberid가져오게된다. -->
+	<!-- 만약 한개 글 여러 작성자가 썼다. (1글 멤버 여럿) -->
+	<!-- <collection property="member" resultMap="memberMap" /> 1:n 관계-->
+</resultMap>
+
+<resultMap type="board.spring.mybatis.MemberDTO" id="memberMap"><!-- 여러개 조합가능 -->
+	<id property="memberid" column="memberid"/> <!-- 프라이머리키인것. --><!-- memberid 가져왔다면 맵핑해줘. 그리고 프라이머리키야. 알려주는것. --> 
+	<result property="name" column="name"/>
+	<result property="phone" column="phone"/>
+	<result property="email" column="email"/>
+	<result property="regtime" column="regtime"/>
+	<result property="pw" column="m_pw"/> <!-- memberdto pw변수에넣어줘. -->
+</resultMap>
+<!-- 알리아스론 memberdto해놨었음. 저 멤버DTO의 변수 맵핑하려한다. id=아무이름으로 줘도됨. -->
+
+
+
+<!-- 테이블 두개 겹침, 테이블 컬럼 모두 가져올 수 있는 데이터 타입 하나를 정해주어야한다.  -->
+<!-- select
+from board c_member  -->
+
+<!-- n번글 쓴사람 내용알고싶다. int -->
+<!-- 멤버dto, boarddto 바로매칭안됨. 3개컬럼 조회만되니까. 뒤에껀 못가져와.  
+dto하나만 가져다간 못함. 
+-->
+
+<!-- 두 테이블 조인하면서, 컬럼 똑같이넣어줌. -->
+<!-- public BoardMemberDTO boardWriterInform(int seq)이렇게 DAO서 쓰면됨. -->
+<!-- boardwritermap리턴이  board.spring.mybatis.BoardMemberDTO얘가져다쓰면됨.-->
+<!-- 일치하는거만, viewcount, writingtime 조회할떈, 둘 다 안보여야해(조회안했으니까) -->
+<!-- 암호도 조회안됨, 지금 우리가 조회하자고 하는거만 하는것이 DTO와의 차이점이다.  -->
+
+<!-- 2테이블 모두 존재하는 컬럼 어떻게 가져올것 ? m_pw  어느테이블 암혼지 명확히 알아서, 맵핑한다. -->
+<select id="boardWriterInform" parameterType="int" resultMap="boardwritermap"> <!-- as키워드 생략해서그렇지 b_pw컬럼이름별칭이라쓸수있음. -->
+select seq, title, contents, memberid, name, email, phone, regtime, b.pw b_pw, m.pw m_pw 
+from board b inner join c_member m 
+on writer = memberid
+where seq=#{seq};
+</select>
+
+
+</mapper>
+
+
+
+
+
+

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+	<include resource="org/springframework/boot/logging/logback/base.xml"/>
+	<logger name="board.spring.mybatis" level="DEBUG" />
+  <logger name="org.springframework.jdbc" level="DEBUG" /> 
+</configuration>
+
+<!-- 로그파일 설정은 무조건 하나만있어야함 log시작하는xml파일은 무조건 하나만있어야함. -->
+<!-- 첫줄 xml선언 -->
+<!-- 기본사항 include첫줄. -->
+<!-- 레벨속성은 디버그줘야 볼 수 있음 DEBUG/INFO/WARN/ERROR/FATAL 로그 다섯단개 진행모든로그 "디버그"-->
+<!-- 네임 어디 패키진지. -->
+<!-- board.spring.mybatis이 패키지 실행되는동안만 로그를 남겨줘. -->
+<!-- JDBC 실행되면 그거도보여줘. -->
